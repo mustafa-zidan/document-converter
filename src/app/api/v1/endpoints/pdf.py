@@ -2,7 +2,6 @@
 
 import os
 import tempfile
-from typing import List
 
 from fastapi import APIRouter, Depends, File, HTTPException, UploadFile, status
 from loguru import logger
@@ -66,6 +65,7 @@ async def convert_pdf_to_text(
         )
 
     # Save uploaded file to temporary file
+    temp_file_path = None
     try:
         with tempfile.NamedTemporaryFile(
             delete=False, suffix=f".{file_ext}"

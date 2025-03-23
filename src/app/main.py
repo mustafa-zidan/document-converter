@@ -74,7 +74,7 @@ def create_application() -> FastAPI:
     # Include v2 API routers
     application.include_router(
         pdf_v2.router,
-        prefix=f"{settings.API_V1_STR}/v2/pdf",
+        prefix=f"{settings.API_V2_STR}/pdf",
         tags=["pdf-v2"],
     )
 

@@ -2,7 +2,6 @@
 
 import os
 import tempfile
-from typing import List
 
 from fastapi import APIRouter, Depends, File, HTTPException, UploadFile, status
 from loguru import logger
@@ -23,7 +22,7 @@ def get_smoldocling_service() -> SmolDoclingService:
     Returns:
         SmolDoclingService instance.
     """
-    return SmolDoclingService(model_name="ds4sd/SmolDocling-256M-preview")
+    return SmolDoclingService(model_name=settings.SMOLDOCLING_MODEL)
 
 
 @router.post(
@@ -69,6 +68,7 @@ async def convert_pdf_to_text(
         )
 
     # Save uploaded file to temporary file
+    temp_file_path = None
     try:
         with tempfile.NamedTemporaryFile(
             delete=False, suffix=f".{file_ext}"
