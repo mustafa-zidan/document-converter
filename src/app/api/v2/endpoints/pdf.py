@@ -16,6 +16,9 @@ from app.services.smoldocling_service import (
 
 router = APIRouter()
 
+# Create a singleton instance of SmolDoclingService
+_smoldocling_service: Optional[SmolDoclingService] = None
+
 
 def get_smoldocling_service() -> SmolDoclingService:
     """Get SmolDocling service instance.
@@ -23,7 +26,11 @@ def get_smoldocling_service() -> SmolDoclingService:
     Returns:
         SmolDoclingService instance.
     """
-    return SmolDoclingService(model_name=settings.SMOLDOCLING_MODEL)
+    global _smoldocling_service
+    if _smoldocling_service is None:
+        logger.info("Initializing SmolDocling service singleton")
+        _smoldocling_service = SmolDoclingService(model_name=settings.SMOLDOCLING_MODEL)
+    return _smoldocling_service
 
 
 @router.post(
