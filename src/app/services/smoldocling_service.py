@@ -5,9 +5,9 @@ from typing import Optional, Union
 
 import torch
 from loguru import logger
-from PIL import Image
 from pdf2image import convert_from_path
-from transformers import AutoProcessor, AutoModelForVision2Seq
+from PIL import Image
+from transformers import AutoModelForVision2Seq, AutoProcessor
 
 
 class SmolDoclingConversionError(Exception):

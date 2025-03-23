@@ -4,13 +4,12 @@ import os
 import tempfile
 
 import pytest
-
+from fastapi.testclient import TestClient
 from reportlab.lib.pagesizes import LETTER
 from reportlab.lib.units import inch
 from reportlab.pdfgen.canvas import Canvas
 
 from app.main import app
-from fastapi.testclient import TestClient
 
 
 @pytest.fixture

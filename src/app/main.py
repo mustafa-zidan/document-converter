@@ -13,7 +13,6 @@ from app.api.v2.endpoints import pdf as pdf_v2
 from app.core.config import settings
 from app.core.version import __version__, get_version
 
-
 # Configure logging
 logging.basicConfig(level=logging.INFO)
 logger.info(f"Starting {settings.PROJECT_NAME} v{__version__}")
