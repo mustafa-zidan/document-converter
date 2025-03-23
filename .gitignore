@@ -23,7 +23,6 @@ wheels/
 *.egg-info/
 .installed.cfg
 *.egg
-
 # Unit test / coverage reports
 htmlcov/
 .tox/
@@ -47,6 +46,7 @@ venv.bak/
 
 # IDE specific files
 .idea/
+.idea/misc.xml
 .vscode/
 *.swp
 *.swo
