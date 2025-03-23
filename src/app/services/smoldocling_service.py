@@ -135,6 +135,11 @@ class SmolDoclingService:
             # Preprocess the image
             inputs = self.processor(images=image, return_tensors="pt").to(self.device)
 
+            # Check if pixel_values tensor is empty or has a zero dimension
+            if inputs.pixel_values.shape[0] == 0 or 0 in inputs.pixel_values.shape:
+                logger.warning("Empty or invalid image tensor detected with shape: {}", inputs.pixel_values.shape)
+                return ""  # Return empty string for empty or invalid images
+
             # Generate text
             with torch.no_grad():
                 generated_ids = self.model.generate(
