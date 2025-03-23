@@ -1,12 +1,12 @@
 """Service for converting PDF files to text using SmolDocling model."""
 
 from pathlib import Path
-from typing import Optional, Union
+from typing import BinaryIO, Optional, Union
 
 import torch
 import platform
 from loguru import logger
-from pdf2image import convert_from_path
+from pdf2image import convert_from_path, convert_from_bytes
 from PIL import Image
 from transformers import AutoModelForVision2Seq, AutoProcessor
 
@@ -64,11 +64,11 @@ class SmolDoclingService:
             logger.error(error_msg)
             raise SmolDoclingConversionError(error_msg) from e
 
-    def extract_text_from_pdf(self, file_path: Union[str, Path]) -> str:
+    def extract_text_from_pdf(self, file_input: Union[str, Path, BinaryIO]) -> str:
         """Extract text from a PDF file using SmolDocling model.
 
         Args:
-            file_path: Path to the PDF file.
+            file_input: Path to the PDF file or a file-like object.
 
         Returns:
             Extracted text from the PDF.
@@ -77,11 +77,23 @@ class SmolDoclingService:
             SmolDoclingConversionError: If text extraction fails.
         """
         try:
-            file_path = Path(file_path)
-            logger.info("Extracting text from PDF using SmolDocling: {}", file_path)
+            # Check if file_input is a file-like object
+            if hasattr(file_input, 'read'):
+                logger.info("Extracting text from PDF file object using SmolDocling")
 
-            # Convert PDF to images
-            images = self._convert_pdf_to_images(file_path)
+                # Get the file content as bytes
+                file_input.seek(0)
+                file_bytes = file_input.read()
+
+                # Convert PDF bytes to images
+                images = self._convert_pdf_bytes_to_images(file_bytes)
+            else:
+                # Handle file path
+                file_path = Path(file_input)
+                logger.info("Extracting text from PDF using SmolDocling: {}", file_path)
+
+                # Convert PDF to images
+                images = self._convert_pdf_to_images(file_path)
 
             # Extract text from each image and combine
             all_text: list[str] = []
@@ -119,6 +131,25 @@ class SmolDoclingService:
             return images
         except Exception as e:
             error_msg = f"Failed to convert PDF to images: {str(e)}"
+            logger.error(error_msg)
+            raise SmolDoclingConversionError(error_msg) from e
+
+    def _convert_pdf_bytes_to_images(self, file_bytes: bytes) -> list[Image.Image]:
+        """Convert PDF bytes to a list of images.
+
+        Args:
+            file_bytes: PDF file content as bytes.
+
+        Returns:
+            List of PIL Image objects.
+        """
+        try:
+            logger.info("Converting PDF bytes to images")
+            images = convert_from_bytes(file_bytes)
+            logger.info("Successfully converted PDF bytes to {} images", len(images))
+            return images
+        except Exception as e:
+            error_msg = f"Failed to convert PDF bytes to images: {str(e)}"
             logger.error(error_msg)
             raise SmolDoclingConversionError(error_msg) from e
 

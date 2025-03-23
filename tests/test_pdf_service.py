@@ -6,6 +6,7 @@ from pathlib import Path
 from unittest.mock import MagicMock, patch
 
 import pytest
+from PIL import Image
 from reportlab.lib.pagesizes import LETTER
 from reportlab.lib.units import inch
 from reportlab.pdfgen.canvas import Canvas
@@ -94,3 +95,24 @@ def test_ocr_fallback(mock_extract_standard, pdf_service, sample_pdf_path):
     text = pdf_service.extract_text_from_pdf(sample_pdf_path)
     assert text == "OCR extracted text"
     pdf_service._extract_text_ocr.assert_called_once()
+
+
+def test_extract_text_ocr(pdf_service, sample_pdf_path):
+    """Test OCR text extraction from a PDF using actual pytesseract.
+
+    This test uses the real OCR functionality to extract text from a PDF.
+    If Tesseract is not installed, the test will be skipped.
+    """
+    # Check if Tesseract is installed
+    import shutil
+    tesseract_installed = shutil.which("tesseract") is not None
+
+    if not tesseract_installed:
+        pytest.skip("Tesseract OCR is not installed. Skipping OCR test.")
+
+    # Extract text using OCR
+    text = pdf_service._extract_text_ocr(Path(sample_pdf_path))
+
+    # Verify the results
+    assert "Hello, this is a test PDF!" in text
+    assert len(text) > 0
