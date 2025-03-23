@@ -24,6 +24,9 @@ COPY . .
 # Install Python dependencies using uv
 RUN uv sync -e .
 
+# Pre-download the SmolDocling model
+RUN python -c "from transformers import AutoProcessor, AutoModelForVision2Seq; AutoProcessor.from_pretrained('ds4sd/SmolDocling-256M-preview'); AutoModelForVision2Seq.from_pretrained('ds4sd/SmolDocling-256M-preview')"
+
 # Expose port
 EXPOSE 8000
 
