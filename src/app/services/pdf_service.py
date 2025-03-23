@@ -6,7 +6,7 @@ from typing import BinaryIO, Union
 import pypdf
 import pytesseract
 from loguru import logger
-from pdf2image import convert_from_path, convert_from_bytes
+from pdf2image import convert_from_bytes, convert_from_path
 from PIL import Image
 
 
@@ -42,7 +42,7 @@ class PDFService:
         """
         try:
             # Check if file_input is a file-like object
-            if hasattr(file_input, 'read'):
+            if hasattr(file_input, "read"):
                 logger.info("Extracting text from PDF file object")
 
                 # Try standard PDF text extraction first
@@ -86,7 +86,7 @@ class PDFService:
         """
         try:
             # Check if file_input is a file-like object
-            if hasattr(file_input, 'read'):
+            if hasattr(file_input, "read"):
                 # Use the file object directly
                 file_input.seek(0)
                 reader: pypdf.PdfReader = pypdf.PdfReader(file_input)

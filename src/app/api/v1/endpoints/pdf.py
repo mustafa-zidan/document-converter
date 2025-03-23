@@ -74,7 +74,9 @@ async def convert_pdf_to_text(
 
             # Get page count (simplified implementation)
             page_count: Optional[int] = None
-            ocr_used: bool = False  # In a real implementation, this would be determined by the service
+            ocr_used: bool = (
+                False  # In a real implementation, this would be determined by the service
+            )
 
             return PDFTextResponse(
                 text=text,

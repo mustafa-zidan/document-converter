@@ -31,7 +31,7 @@ class Settings(BaseSettings):
     OCR_ENABLED: bool = True
     SMOLDOCLING_MODEL: str = "ds4sd/SmolDocling-256M-preview"
 
-    @field_validator("BACKEND_CORS_ORIGINS", mode='before')
+    @field_validator("BACKEND_CORS_ORIGINS", mode="before")
     def assemble_cors_origins(cls, v: Union[str, List[str]]) -> Union[List[str], str]:
         """Validate CORS origins.
 

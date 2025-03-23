@@ -83,7 +83,10 @@ async def convert_pdf_to_text(
 
             # Check if we're running in a test environment
             # This is a workaround for the test environment where the mock is not working correctly
-            if hasattr(smoldocling_service, '_is_test_mock') and smoldocling_service._is_test_mock:
+            if (
+                hasattr(smoldocling_service, "_is_test_mock")
+                and smoldocling_service._is_test_mock
+            ):
                 # In test environment, return a predefined response
                 text = "Hello, this is a test PDF extracted by SmolDocling!"
             else:

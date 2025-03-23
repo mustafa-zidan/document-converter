@@ -10,7 +10,10 @@ from reportlab.lib.units import inch
 from reportlab.pdfgen.canvas import Canvas
 
 from app.main import app
-from app.services.smoldocling_service import SmolDoclingService, SmolDoclingConversionError
+from app.services.smoldocling_service import (
+    SmolDoclingConversionError,
+    SmolDoclingService,
+)
 
 
 @pytest.fixture
@@ -55,7 +58,7 @@ def test_convert_pdf_endpoint_v2(client, sample_pdf_path, smoldocling_available)
     # Skip if SmolDocling is not available
     if not smoldocling_available:
         pytest.skip("SmolDocling service is not available")
-    
+
     # Open the sample PDF file
     with open(sample_pdf_path, "rb") as pdf_file:
         # Create a multipart form with the PDF file
@@ -126,17 +129,19 @@ def test_convert_pdf_file_too_large_v2(client, sample_pdf_path, monkeypatch):
         monkeypatch.setattr(settings, "MAX_UPLOAD_SIZE", original_max_size)
 
 
-def test_convert_pdf_service_error_v2(client, sample_pdf_path, smoldocling_available, monkeypatch):
+def test_convert_pdf_service_error_v2(
+    client, sample_pdf_path, smoldocling_available, monkeypatch
+):
     """Test the v2 PDF conversion endpoint when the service raises an error."""
     # Skip if SmolDocling is not available
     if not smoldocling_available:
         pytest.skip("SmolDocling service is not available")
-    
+
     # Create a corrupted PDF file that will cause an error
     with tempfile.NamedTemporaryFile(suffix=".pdf", delete=False) as temp_file:
         temp_file.write(b"This is not a valid PDF file")
         corrupted_path = temp_file.name
-    
+
     try:
         # Open the corrupted PDF file
         with open(corrupted_path, "rb") as pdf_file:

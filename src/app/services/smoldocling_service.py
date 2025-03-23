@@ -1,12 +1,15 @@
-"""Service for converting PDF files to text using SmolDocling model."""
+"""Service for converting PDF files to Markdown using SmolDocling model."""
 
+import platform
+import time
 from pathlib import Path
-from typing import BinaryIO, Optional, Union
+from typing import BinaryIO, Union
 
 import torch
-import platform
+from docling_core.types.doc import DoclingDocument
+from docling_core.types.doc.document import DocTagsDocument
 from loguru import logger
-from pdf2image import convert_from_path, convert_from_bytes
+from pdf2image import convert_from_bytes, convert_from_path
 from PIL import Image
 from transformers import AutoModelForVision2Seq, AutoProcessor
 
@@ -18,174 +21,142 @@ class SmolDoclingConversionError(Exception):
 
 
 class SmolDoclingService:
-    """Service for converting PDF files to text using SmolDocling model."""
+    """Service for converting PDF files to Markdown using the SmolDocling model."""
 
     def __init__(self, model_name: str = "ds4sd/SmolDocling-256M-preview"):
-        """Initialize the SmolDocling service.
-
-        Args:
-            model_name: Name of the SmolDocling model to use.
-        """
-        self.model_name: str = model_name
-        self.processor: AutoProcessor
-        self.model: AutoModelForVision2Seq
-        self.device: str
-        logger.info("Initializing SmolDocling service with model: {}", model_name)
+        logger.info("🚀 Initializing SmolDocling service with model: {}", model_name)
 
         try:
-            # Load model and processor
-            self.processor = AutoProcessor.from_pretrained(model_name)
-            self.model = AutoModelForVision2Seq.from_pretrained(model_name)
-
-            # Move model to GPU if available
-            # Check for CUDA (NVIDIA) GPU first
-            if torch.cuda.is_available():
-                self.device = "cuda"
-                logger.info("CUDA GPU detected and will be used for inference")
-            # Check for MPS (Apple Silicon) GPU if CUDA is not available
-            elif platform.system() == "Darwin" and hasattr(torch.backends, "mps") and torch.backends.mps.is_available():
+            # Select device
+            if torch.backends.mps.is_available():
                 self.device = "mps"
-                logger.info("Apple Silicon GPU (MPS) detected and will be used for inference")
-            # Fall back to CPU if no GPU is available
+                torch_dtype = torch.float16
+                logger.info("💻 Apple Silicon GPU (MPS) detected")
+            elif torch.cuda.is_available():
+                self.device = "cuda"
+                torch_dtype = torch.bfloat16
+                logger.info("🖥️ CUDA GPU detected")
             else:
                 self.device = "cpu"
-                if platform.system() == "Darwin" and hasattr(torch.backends, "mps"):
-                    logger.warning("Running on Mac but MPS is not available. Using CPU instead.")
-                else:
-                    logger.warning("No GPU detected. Using CPU for inference (this may be slow)")
+                torch_dtype = torch.float32
+                logger.warning("⚠️ No GPU detected. Running on CPU.")
 
-            self.model.to(self.device)
+            # Load model
+            self.model = AutoModelForVision2Seq.from_pretrained(
+                model_name,
+                torch_dtype=torch_dtype,
+                _attn_implementation="eager",  # flash_attention not supported on MPS
+            ).to(self.device)
 
-            logger.info(
-                "Successfully loaded SmolDocling model on device: {}", self.device
-            )
+            # Load processor
+            self.processor = AutoProcessor.from_pretrained(model_name)
+
+            logger.success("✅ SmolDocling model loaded on device: {}", self.device)
+
         except Exception as e:
-            error_msg = f"Failed to initialize SmolDocling model: {str(e)}"
-            logger.error(error_msg)
-            raise SmolDoclingConversionError(error_msg) from e
+            msg = f"Failed to initialize SmolDocling model: {e}"
+            logger.exception(msg)
+            raise SmolDoclingConversionError(msg) from e
 
     def extract_text_from_pdf(self, file_input: Union[str, Path, BinaryIO]) -> str:
-        """Extract text from a PDF file using SmolDocling model.
+        start_time = time.time()
 
-        Args:
-            file_input: Path to the PDF file or a file-like object.
-
-        Returns:
-            Extracted text from the PDF.
-
-        Raises:
-            SmolDoclingConversionError: If text extraction fails.
-        """
         try:
-            # Check if file_input is a file-like object
-            if hasattr(file_input, 'read'):
-                logger.info("Extracting text from PDF file object using SmolDocling")
-
-                # Get the file content as bytes
+            if hasattr(file_input, "read"):  # file-like object
+                logger.info("📄 Extracting from file-like PDF input")
                 file_input.seek(0)
                 file_bytes = file_input.read()
-
-                # Convert PDF bytes to images
                 images = self._convert_pdf_bytes_to_images(file_bytes)
-            else:
-                # Handle file path
+            else:  # path
                 file_path = Path(file_input)
-                logger.info("Extracting text from PDF using SmolDocling: {}", file_path)
-
-                # Convert PDF to images
+                logger.info("📄 Extracting from PDF file: {}", file_path)
                 images = self._convert_pdf_to_images(file_path)
 
-            # Extract text from each image and combine
-            all_text: list[str] = []
+            all_markdown = []
             for i, image in enumerate(images):
-                logger.info("Processing page {} of {}", i + 1, len(images))
-                page_text = self._extract_text_from_image(image)
-                all_text.append(page_text)
+                logger.info("🖼️  Processing page {}/{}", i + 1, len(images))
+                page_md = self._extract_text_from_image(image)
+                all_markdown.append(page_md)
 
-            # Combine text from all pages
-            combined_text = "\n\n".join(all_text)
-
-            logger.info(
-                "Successfully extracted {} characters from PDF using SmolDocling",
-                len(combined_text),
+            combined = "\n\n---\n\n".join(all_markdown)
+            logger.success(
+                "✅ Extracted {} pages in {:.2f}s",
+                len(images),
+                time.time() - start_time,
             )
-            return combined_text
+            return combined
+
         except Exception as e:
-            error_msg = f"Failed to extract text from PDF using SmolDocling: {str(e)}"
-            logger.error(error_msg)
-            raise SmolDoclingConversionError(error_msg) from e
+            msg = f"Failed to extract text from PDF: {e}"
+            logger.exception(msg)
+            raise SmolDoclingConversionError(msg) from e
 
     def _convert_pdf_to_images(self, file_path: Path) -> list[Image.Image]:
-        """Convert PDF to a list of images.
-
-        Args:
-            file_path: Path to the PDF file.
-
-        Returns:
-            List of PIL Image objects.
-        """
         try:
-            logger.info("Converting PDF to images: {}", file_path)
             images = convert_from_path(file_path)
-            logger.info("Successfully converted PDF to {} images", len(images))
+            logger.info("🖼️ Converted PDF to {} image(s)", len(images))
             return images
         except Exception as e:
-            error_msg = f"Failed to convert PDF to images: {str(e)}"
-            logger.error(error_msg)
-            raise SmolDoclingConversionError(error_msg) from e
+            msg = f"Failed to convert PDF to images: {e}"
+            logger.error(msg)
+            raise SmolDoclingConversionError(msg) from e
 
     def _convert_pdf_bytes_to_images(self, file_bytes: bytes) -> list[Image.Image]:
-        """Convert PDF bytes to a list of images.
-
-        Args:
-            file_bytes: PDF file content as bytes.
-
-        Returns:
-            List of PIL Image objects.
-        """
         try:
-            logger.info("Converting PDF bytes to images")
             images = convert_from_bytes(file_bytes)
-            logger.info("Successfully converted PDF bytes to {} images", len(images))
+            logger.info("🖼️ Converted PDF bytes to {} image(s)", len(images))
             return images
         except Exception as e:
-            error_msg = f"Failed to convert PDF bytes to images: {str(e)}"
-            logger.error(error_msg)
-            raise SmolDoclingConversionError(error_msg) from e
+            msg = f"Failed to convert PDF bytes to images: {e}"
+            logger.error(msg)
+            raise SmolDoclingConversionError(msg) from e
 
     def _extract_text_from_image(self, image: Image.Image) -> str:
-        """Extract text from an image using SmolDocling model.
-
-        Args:
-            image: PIL Image object.
-
-        Returns:
-            Extracted text from the image.
-        """
         try:
-            # Preprocess the image
-            inputs = self.processor(images=image, return_tensors="pt").to(self.device)
+            # Create chat prompt
+            messages = [
+                {
+                    "role": "user",
+                    "content": [
+                        {"type": "image"},
+                        {"type": "text", "text": "Convert this page to docling."},
+                    ],
+                }
+            ]
+            prompt = self.processor.apply_chat_template(
+                messages, add_generation_prompt=True
+            )
 
-            # Check if pixel_values tensor is empty or has a zero dimension
-            if inputs.pixel_values.shape[0] == 0 or 0 in inputs.pixel_values.shape:
-                logger.warning("Empty or invalid image tensor detected with shape: {}", inputs.pixel_values.shape)
-                return ""  # Return empty string for empty or invalid images
+            inputs = self.processor(
+                text=prompt, images=[image], return_tensors="pt", truncation=True
+            ).to(self.device)
 
-            # Generate text
             with torch.no_grad():
                 generated_ids = self.model.generate(
-                    pixel_values=inputs.pixel_values,
-                    max_length=1024,
-                    num_beams=4,
+                    **inputs,
+                    max_new_tokens=8192,
+                    do_sample=True,
+                    temperature=0.7,
+                    top_p=0.95,
                 )
 
-            # Decode the generated text
-            generated_text = self.processor.batch_decode(
-                generated_ids, skip_special_tokens=True
-            )[0]
+            prompt_len = inputs["input_ids"].shape[1]
+            trimmed_ids = generated_ids[:, prompt_len:]
 
-            return generated_text
+            doctags = self.processor.batch_decode(
+                trimmed_ids, skip_special_tokens=False
+            )[0].lstrip()
+
+            # Convert to Markdown
+            doctags_doc = DocTagsDocument.from_doctags_and_image_pairs(
+                [doctags], [image]
+            )
+            doc = DoclingDocument(name="ConvertedDocument")
+            doc.load_from_doctags(doctags_doc)
+
+            return doc.export_to_markdown()
+
         except Exception as e:
-            error_msg = f"Failed to extract text from image: {str(e)}"
-            logger.error(error_msg)
-            raise SmolDoclingConversionError(error_msg) from e
+            msg = f"Failed to extract text from image: {e}"
+            logger.exception(msg)
+            raise SmolDoclingConversionError(msg) from e

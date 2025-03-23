@@ -19,6 +19,7 @@ logger.info(f"Starting {settings.PROJECT_NAME} v{__version__}")
 
 # Preload the SmolDocling model at application startup
 from app.api.v2.endpoints.pdf import get_smoldocling_service
+
 logger.info("Preloading SmolDocling model at application startup")
 get_smoldocling_service()  # This will initialize the singleton instance
 

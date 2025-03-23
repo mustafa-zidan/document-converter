@@ -1,8 +1,8 @@
 """Tests for the PDF service."""
 
 import os
-import tempfile
 import shutil
+import tempfile
 from pathlib import Path
 
 import pytest
@@ -59,21 +59,21 @@ def image_only_pdf_path():
     # Create a temporary image
     with tempfile.NamedTemporaryFile(suffix=".png", delete=False) as temp_img_file:
         img_path = temp_img_file.name
-    
+
     # Create a blank image with text
-    img = Image.new('RGB', (500, 500), color='white')
+    img = Image.new("RGB", (500, 500), color="white")
     img.save(img_path)
-    
+
     # Create a PDF from the image
     with tempfile.NamedTemporaryFile(suffix=".pdf", delete=False) as temp_pdf_file:
         pdf_path = temp_pdf_file.name
-    
+
     # Use the image to create a PDF (this will be an image-only PDF with no extractable text)
     img = Image.open(img_path)
     img.save(pdf_path, "PDF")
-    
+
     yield pdf_path
-    
+
     # Clean up
     if os.path.exists(img_path):
         os.unlink(img_path)
@@ -115,12 +115,12 @@ def test_extract_text_standard_exception(pdf_service):
     # Test with a non-existent file
     with pytest.raises(FileNotFoundError):
         pdf_service._extract_text_standard(Path("non_existent_file.pdf"))
-    
+
     # Test with a corrupted PDF file
     with tempfile.NamedTemporaryFile(suffix=".pdf", delete=False) as temp_file:
         temp_file.write(b"This is not a valid PDF file")
         corrupted_path = temp_file.name
-    
+
     try:
         # Extract text should return empty string if the extraction fails
         text = pdf_service._extract_text_standard(Path(corrupted_path))
@@ -137,14 +137,14 @@ def test_ocr_fallback(pdf_service, image_only_pdf_path):
     tesseract_installed = shutil.which("tesseract") is not None
     if not tesseract_installed:
         pytest.skip("Tesseract OCR is not installed. Skipping OCR test.")
-    
+
     # Standard extraction should return empty string for image-only PDF
     standard_text = pdf_service._extract_text_standard(Path(image_only_pdf_path))
     assert standard_text.strip() == ""
-    
+
     # Extract text should fall back to OCR
     text = pdf_service.extract_text_from_pdf(image_only_pdf_path)
-    
+
     # The text might not be perfect due to OCR, but it should not be empty
     assert len(text) > 0
 
