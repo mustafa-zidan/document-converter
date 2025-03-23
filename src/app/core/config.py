@@ -2,7 +2,7 @@
 
 from typing import List, Optional, Union
 
-from pydantic import AnyHttpUrl, validator
+from pydantic import AnyHttpUrl, field_validator
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
 
@@ -31,7 +31,7 @@ class Settings(BaseSettings):
     OCR_ENABLED: bool = True
     SMOLDOCLING_MODEL: str = "ds4sd/SmolDocling-256M-preview"
 
-    @validator("BACKEND_CORS_ORIGINS", pre=True)
+    @field_validator("BACKEND_CORS_ORIGINS", mode='before')
     def assemble_cors_origins(cls, v: Union[str, List[str]]) -> Union[List[str], str]:
         """Validate CORS origins.
 

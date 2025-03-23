@@ -2,7 +2,7 @@
 
 from typing import Optional
 
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, Field, ConfigDict
 
 
 class PDFTextResponse(BaseModel):
@@ -13,10 +13,8 @@ class PDFTextResponse(BaseModel):
     page_count: Optional[int] = Field(None, description="Number of pages in the PDF")
     ocr_used: bool = Field(False, description="Whether OCR was used for extraction")
 
-    class Config:
-        """Pydantic model configuration."""
-
-        json_schema_extra = {
+    model_config = ConfigDict(
+        json_schema_extra={
             "example": {
                 "text": "This is the extracted text from the PDF...",
                 "filename": "example.pdf",
@@ -24,6 +22,7 @@ class PDFTextResponse(BaseModel):
                 "ocr_used": False,
             }
         }
+    )
 
 
 class ErrorResponse(BaseModel):
@@ -31,7 +30,6 @@ class ErrorResponse(BaseModel):
 
     detail: str = Field(..., description="Error detail")
 
-    class Config:
-        """Pydantic model configuration."""
-
-        json_schema_extra = {"example": {"detail": "Failed to process PDF file"}}
+    model_config = ConfigDict(
+        json_schema_extra={"example": {"detail": "Failed to process PDF file"}}
+    )
