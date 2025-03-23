@@ -47,7 +47,7 @@ def main():
     print("Press Ctrl+C to stop the server")
     
     uvicorn.run(
-        "src.app.main:app",
+        app="app.main:app",
         host=args.host,
         port=args.port,
         reload=args.reload,

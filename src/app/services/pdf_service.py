@@ -22,7 +22,7 @@ class PDFService:
         Args:
             ocr_enabled: Whether to use OCR for scanned PDFs.
         """
-        self.ocr_enabled = ocr_enabled
+        self.ocr_enabled: bool = ocr_enabled
         logger.info("Initialized PDF service with OCR enabled: {}", ocr_enabled)
 
     def extract_text_from_pdf(self, file_path: Union[str, Path]) -> str:
@@ -67,8 +67,8 @@ class PDFService:
         """
         try:
             with open(file_path, "rb") as file:
-                reader = pypdf.PdfReader(file)
-                text = ""
+                reader: pypdf.PdfReader = pypdf.PdfReader(file)
+                text: str = ""
                 for page in reader.pages:
                     page_text = page.extract_text() or ""
                     text += page_text + "\n"

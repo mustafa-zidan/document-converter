@@ -25,7 +25,10 @@ class SmolDoclingService:
         Args:
             model_name: Name of the SmolDocling model to use.
         """
-        self.model_name = model_name
+        self.model_name: str = model_name
+        self.processor: AutoProcessor
+        self.model: AutoModelForVision2Seq
+        self.device: str
         logger.info("Initializing SmolDocling service with model: {}", model_name)
 
         try:
@@ -65,7 +68,7 @@ class SmolDoclingService:
             images = self._convert_pdf_to_images(file_path)
 
             # Extract text from each image and combine
-            all_text = []
+            all_text: list[str] = []
             for i, image in enumerate(images):
                 logger.info("Processing page {} of {}", i + 1, len(images))
                 page_text = self._extract_text_from_image(image)
@@ -84,7 +87,7 @@ class SmolDoclingService:
             logger.error(error_msg)
             raise SmolDoclingConversionError(error_msg) from e
 
-    def _convert_pdf_to_images(self, file_path: Path) -> list:
+    def _convert_pdf_to_images(self, file_path: Path) -> list[Image.Image]:
         """Convert PDF to a list of images.
 
         Args:

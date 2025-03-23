@@ -2,6 +2,7 @@
 
 import os
 import tempfile
+from typing import Optional
 
 from fastapi import APIRouter, Depends, File, HTTPException, UploadFile, status
 from loguru import logger
@@ -65,13 +66,13 @@ async def convert_pdf_to_text(
         )
 
     # Save uploaded file to temporary file
-    temp_file_path = None
+    temp_file_path: Optional[str] = None
     try:
         with tempfile.NamedTemporaryFile(
             delete=False, suffix=f".{file_ext}"
         ) as temp_file:
             temp_file_path = temp_file.name
-            content = await file.read()
+            content: bytes = await file.read()
             temp_file.write(content)
 
         # Extract text from PDF
@@ -79,8 +80,8 @@ async def convert_pdf_to_text(
             text = pdf_service.extract_text_from_pdf(temp_file_path)
 
             # Get page count (simplified implementation)
-            page_count = None
-            ocr_used = False  # In a real implementation, this would be determined by the service
+            page_count: Optional[int] = None
+            ocr_used: bool = False  # In a real implementation, this would be determined by the service
 
             return PDFTextResponse(
                 text=text,
