@@ -82,7 +82,6 @@ class PDFService:
             logger.warning("Standard text extraction failed: {}", str(e))
             return ""
 
-
     def _extract_text_ocr(self, file_path: Path) -> str:
         """Extract text from a PDF using OCR.
 

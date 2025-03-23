@@ -1,4 +1,5 @@
 """Integration tests for the API endpoints."""
+
 import os
 import tempfile
 
@@ -93,6 +94,7 @@ def test_convert_pdf_file_too_large(client, sample_pdf_path, monkeypatch):
     """Test the PDF conversion endpoint with a file that's too large."""
     # Temporarily set the max upload size to a small value
     from app.core.config import settings
+
     original_max_size = settings.MAX_UPLOAD_SIZE
     monkeypatch.setattr(settings, "MAX_UPLOAD_SIZE", 10)  # 10 bytes
 

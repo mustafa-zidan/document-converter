@@ -57,7 +57,7 @@ cd document-converter
 # Create a virtual environment and install dependencies
 uv venv
 source .venv/bin/activate  # On Windows: .venv\Scripts\activate
-uv pip install -e .
+uv sync --dev
 ```
 
 ## Configuration

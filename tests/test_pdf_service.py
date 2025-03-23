@@ -1,4 +1,5 @@
 """Tests for the PDF service."""
+
 import os
 import tempfile
 from pathlib import Path
@@ -28,9 +29,9 @@ def sample_pdf_path():
     canvas = Canvas(pdf_path, pagesize=LETTER)
     canvas.drawString(1 * inch, 10 * inch, "Hello, this is a test PDF!")
     canvas.save()
-    
+
     yield pdf_path
-    
+
     # Clean up
     if os.path.exists(pdf_path):
         os.unlink(pdf_path)
@@ -40,7 +41,7 @@ def test_extract_text_standard(pdf_service, sample_pdf_path):
     """Test standard text extraction from a PDF."""
     # Extract text from the sample PDF
     text = pdf_service._extract_text_standard(Path(sample_pdf_path))
-    
+
     # Check that the text was extracted correctly
     assert "Hello, this is a test PDF!" in text
     assert len(text) > 0
@@ -50,7 +51,7 @@ def test_extract_text_from_pdf(pdf_service, sample_pdf_path):
     """Test the main text extraction method."""
     # Extract text from the sample PDF
     text = pdf_service.extract_text_from_pdf(sample_pdf_path)
-    
+
     # Check that the text was extracted correctly
     assert "Hello, this is a test PDF!" in text
     assert len(text) > 0
@@ -59,7 +60,7 @@ def test_extract_text_from_pdf(pdf_service, sample_pdf_path):
 def test_extract_text_from_pdf_error():
     """Test error handling in text extraction."""
     pdf_service = PDFService()
-    
+
     # Test with a non-existent file
     with pytest.raises(PDFConversionError):
         pdf_service.extract_text_from_pdf("non_existent_file.pdf")
@@ -85,10 +86,10 @@ def test_ocr_fallback(mock_extract_standard, pdf_service, sample_pdf_path):
     """Test OCR fallback when standard extraction returns no text."""
     # Mock standard extraction to return empty string
     mock_extract_standard.return_value = ""
-    
+
     # Mock OCR extraction
     pdf_service._extract_text_ocr = MagicMock(return_value="OCR extracted text")
-    
+
     # Extract text should fall back to OCR
     text = pdf_service.extract_text_from_pdf(sample_pdf_path)
     assert text == "OCR extracted text"
