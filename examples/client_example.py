@@ -9,7 +9,7 @@ import requests
 
 def parse_args():
     """Parse command line arguments.
-    
+
     Returns:
         Parsed arguments.
     """
@@ -20,10 +20,28 @@ def parse_args():
         help="Path to the PDF file to convert",
     )
     parser.add_argument(
-        "--api-url",
+        "--host",
         type=str,
-        default="http://localhost:8000/api/v1/pdf/convert",
-        help="URL of the conversion API endpoint (default: http://localhost:8000/api/v1/pdf/convert)",
+        default="localhost",
+        help="API host (default: localhost)",
+    )
+    parser.add_argument(
+        "--port",
+        type=int,
+        default=8000,
+        help="API port (default: 8000)",
+    )
+    parser.add_argument(
+        "--api-version",
+        type=str,
+        default="v1",
+        help="API version (default: v1)",
+    )
+    parser.add_argument(
+        "--path",
+        type=str,
+        default="pdf/convert",
+        help="API endpoint path (default: pdf/convert)",
     )
     parser.add_argument(
         "--output",
@@ -36,33 +54,36 @@ def parse_args():
 def main():
     """Run the client example."""
     args = parse_args()
-    
+
     # Check if the PDF file exists
     pdf_path = Path(args.pdf_file)
     if not pdf_path.exists():
         print(f"Error: PDF file not found: {pdf_path}")
         return 1
-    
+
     print(f"Converting PDF file: {pdf_path}")
-    print(f"API URL: {args.api_url}")
-    
+
+    # Construct the API URL from components
+    api_url = f"http://{args.host}:{args.port}/api/{args.api_version}/{args.path}"
+    print(f"API URL: {api_url}")
+
     try:
         # Open the PDF file
         with open(pdf_path, "rb") as pdf_file:
             # Create a multipart form with the PDF file
             files = {"file": (pdf_path.name, pdf_file, "application/pdf")}
-            
+
             # Make a POST request to the conversion endpoint
             print("Sending request to API...")
-            response = requests.post(args.api_url, files=files)
-            
+            response = requests.post(api_url, files=files)
+
             # Check if the request was successful
             response.raise_for_status()
-            
+
             # Parse the response
             result = response.json()
             text = result["text"]
-            
+
             # Print or save the extracted text
             if args.output:
                 output_path = Path(args.output)
@@ -74,11 +95,11 @@ def main():
                 print("-" * 40)
                 print(text)
                 print("-" * 40)
-            
+
             print(f"\nSuccess! Extracted {len(text)} characters from {pdf_path.name}")
             if result.get("ocr_used"):
                 print("Note: OCR was used for text extraction")
-            
+
             return 0
     except requests.exceptions.RequestException as e:
         print(f"Error: API request failed: {e}")
