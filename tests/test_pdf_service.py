@@ -2,8 +2,8 @@
 
 import os
 import tempfile
+import shutil
 from pathlib import Path
-from unittest.mock import MagicMock, patch
 
 import pytest
 from PIL import Image
@@ -38,6 +38,49 @@ def sample_pdf_path():
         os.unlink(pdf_path)
 
 
+@pytest.fixture
+def corrupted_pdf_path():
+    """Create a corrupted PDF file for testing."""
+    # Create a temporary file with invalid PDF content
+    with tempfile.NamedTemporaryFile(suffix=".pdf", delete=False) as temp_file:
+        temp_file.write(b"This is not a valid PDF file")
+        pdf_path = temp_file.name
+
+    yield pdf_path
+
+    # Clean up
+    if os.path.exists(pdf_path):
+        os.unlink(pdf_path)
+
+
+@pytest.fixture
+def image_only_pdf_path():
+    """Create a PDF file that contains only an image (no extractable text)."""
+    # Create a temporary image
+    with tempfile.NamedTemporaryFile(suffix=".png", delete=False) as temp_img_file:
+        img_path = temp_img_file.name
+    
+    # Create a blank image with text
+    img = Image.new('RGB', (500, 500), color='white')
+    img.save(img_path)
+    
+    # Create a PDF from the image
+    with tempfile.NamedTemporaryFile(suffix=".pdf", delete=False) as temp_pdf_file:
+        pdf_path = temp_pdf_file.name
+    
+    # Use the image to create a PDF (this will be an image-only PDF with no extractable text)
+    img = Image.open(img_path)
+    img.save(pdf_path, "PDF")
+    
+    yield pdf_path
+    
+    # Clean up
+    if os.path.exists(img_path):
+        os.unlink(img_path)
+    if os.path.exists(pdf_path):
+        os.unlink(pdf_path)
+
+
 def test_extract_text_standard(pdf_service, sample_pdf_path):
     """Test standard text extraction from a PDF."""
     # Extract text from the sample PDF
@@ -67,34 +110,43 @@ def test_extract_text_from_pdf_error():
         pdf_service.extract_text_from_pdf("non_existent_file.pdf")
 
 
-@patch("app.services.pdf_service.pypdf.PdfReader")
-def test_extract_text_standard_exception(mock_pdf_reader, pdf_service, sample_pdf_path):
+def test_extract_text_standard_exception(pdf_service):
     """Test exception handling in standard text extraction."""
-    # Mock PdfReader to raise an exception
-    mock_pdf_reader.side_effect = Exception("Test exception")
-
+    # Test with a non-existent file
     with pytest.raises(FileNotFoundError):
         pdf_service._extract_text_standard(Path("non_existent_file.pdf"))
+    
+    # Test with a corrupted PDF file
+    with tempfile.NamedTemporaryFile(suffix=".pdf", delete=False) as temp_file:
+        temp_file.write(b"This is not a valid PDF file")
+        corrupted_path = temp_file.name
+    
+    try:
+        # Extract text should return empty string if the extraction fails
+        text = pdf_service._extract_text_standard(Path(corrupted_path))
+        assert text == ""
+    finally:
+        # Clean up
+        if os.path.exists(corrupted_path):
+            os.unlink(corrupted_path)
 
-    # Extract text should raise a PDFConversionError if file does not exist or
-    # empty text if the extraction fails
-    text = pdf_service._extract_text_standard(sample_pdf_path)
-    assert text == ""
 
-
-@patch("app.services.pdf_service.PDFService._extract_text_standard")
-def test_ocr_fallback(mock_extract_standard, pdf_service, sample_pdf_path):
+def test_ocr_fallback(pdf_service, image_only_pdf_path):
     """Test OCR fallback when standard extraction returns no text."""
-    # Mock standard extraction to return empty string
-    mock_extract_standard.return_value = ""
-
-    # Mock OCR extraction
-    pdf_service._extract_text_ocr = MagicMock(return_value="OCR extracted text")
-
+    # Skip test if Tesseract is not installed
+    tesseract_installed = shutil.which("tesseract") is not None
+    if not tesseract_installed:
+        pytest.skip("Tesseract OCR is not installed. Skipping OCR test.")
+    
+    # Standard extraction should return empty string for image-only PDF
+    standard_text = pdf_service._extract_text_standard(Path(image_only_pdf_path))
+    assert standard_text.strip() == ""
+    
     # Extract text should fall back to OCR
-    text = pdf_service.extract_text_from_pdf(sample_pdf_path)
-    assert text == "OCR extracted text"
-    pdf_service._extract_text_ocr.assert_called_once()
+    text = pdf_service.extract_text_from_pdf(image_only_pdf_path)
+    
+    # The text might not be perfect due to OCR, but it should not be empty
+    assert len(text) > 0
 
 
 def test_extract_text_ocr(pdf_service, sample_pdf_path):
@@ -104,7 +156,6 @@ def test_extract_text_ocr(pdf_service, sample_pdf_path):
     If Tesseract is not installed, the test will be skipped.
     """
     # Check if Tesseract is installed
-    import shutil
     tesseract_installed = shutil.which("tesseract") is not None
 
     if not tesseract_installed:
