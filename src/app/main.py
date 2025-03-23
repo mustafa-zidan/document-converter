@@ -1,4 +1,5 @@
 """Main application module."""
+
 import logging
 from typing import Any, Dict
 
@@ -7,7 +8,8 @@ from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
 from loguru import logger
 
-from app.api.v1.endpoints import pdf
+from app.api.v1.endpoints import pdf as pdf_v1
+from app.api.v2.endpoints import pdf as pdf_v2
 from app.core.config import settings
 from app.core.version import __version__, get_version
 
@@ -44,7 +46,9 @@ def create_application() -> FastAPI:
 
     # Add exception handlers
     @application.exception_handler(Exception)
-    async def global_exception_handler(request: Request, exc: Exception) -> JSONResponse:
+    async def global_exception_handler(
+        request: Request, exc: Exception
+    ) -> JSONResponse:
         """Global exception handler.
 
         Args:
@@ -62,9 +66,16 @@ def create_application() -> FastAPI:
 
     # Include API routers
     application.include_router(
-        pdf.router,
+        pdf_v1.router,
         prefix=f"{settings.API_V1_STR}/pdf",
-        tags=["pdf"],
+        tags=["pdf-v1"],
+    )
+
+    # Include v2 API routers
+    application.include_router(
+        pdf_v2.router,
+        prefix=f"{settings.API_V1_STR}/v2/pdf",
+        tags=["pdf-v2"],
     )
 
     @application.get("/", include_in_schema=False)

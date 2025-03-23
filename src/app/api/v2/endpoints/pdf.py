@@ -1,4 +1,4 @@
-"""PDF endpoints."""
+"""PDF endpoints for v2 API using SmolDocling model."""
 
 import os
 import tempfile
@@ -9,18 +9,21 @@ from loguru import logger
 
 from app.core.config import settings
 from app.models.pdf import ErrorResponse, PDFTextResponse
-from app.services.pdf_service import PDFConversionError, PDFService
+from app.services.smoldocling_service import (
+    SmolDoclingConversionError,
+    SmolDoclingService,
+)
 
 router = APIRouter()
 
 
-def get_pdf_service() -> PDFService:
-    """Get PDF service instance.
+def get_smoldocling_service() -> SmolDoclingService:
+    """Get SmolDocling service instance.
 
     Returns:
-        PDFService instance.
+        SmolDoclingService instance.
     """
-    return PDFService(ocr_enabled=settings.OCR_ENABLED)
+    return SmolDoclingService(model_name="ds4sd/SmolDocling-256M-preview")
 
 
 @router.post(
@@ -31,18 +34,18 @@ def get_pdf_service() -> PDFService:
         status.HTTP_415_UNSUPPORTED_MEDIA_TYPE: {"model": ErrorResponse},
         status.HTTP_500_INTERNAL_SERVER_ERROR: {"model": ErrorResponse},
     },
-    summary="Convert PDF to text",
-    description="Upload a PDF file and convert it to text",
+    summary="Convert PDF to text using SmolDocling model",
+    description="Upload a PDF file and convert it to text using the SmolDocling-256M-preview model",
 )
 async def convert_pdf_to_text(
     file: UploadFile = File(...),
-    pdf_service: PDFService = Depends(get_pdf_service),
+    smoldocling_service: SmolDoclingService = Depends(get_smoldocling_service),
 ) -> PDFTextResponse:
-    """Convert PDF to text.
+    """Convert PDF to text using SmolDocling model.
 
     Args:
         file: Uploaded PDF file.
-        pdf_service: PDF service instance.
+        smoldocling_service: SmolDocling service instance.
 
     Returns:
         Extracted text from the PDF.
@@ -74,21 +77,20 @@ async def convert_pdf_to_text(
             content = await file.read()
             temp_file.write(content)
 
-        # Extract text from PDF
+        # Extract text from PDF using SmolDocling
         try:
-            text = pdf_service.extract_text_from_pdf(temp_file_path)
+            text = smoldocling_service.extract_text_from_pdf(temp_file_path)
 
             # Get page count (simplified implementation)
             page_count = None
-            ocr_used = False  # In a real implementation, this would be determined by the service
 
             return PDFTextResponse(
                 text=text,
                 filename=file.filename,
                 page_count=page_count,
-                ocr_used=ocr_used,
+                ocr_used=False,  # SmolDocling is not OCR in the traditional sense
             )
-        except PDFConversionError as e:
+        except SmolDoclingConversionError as e:
             raise HTTPException(
                 status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
                 detail=str(e),

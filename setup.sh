@@ -14,21 +14,16 @@ echo -e "${GREEN}Setting up Document Converter API development environment...${N
 # Check if uv is installed
 if command -v uv &> /dev/null; then
     echo -e "${GREEN}uv is installed, using it for dependency management${NC}"
-    USE_UV=true
 else
-    echo -e "${YELLOW}uv is not installed, falling back to pip${NC}"
-    echo -e "${YELLOW}Consider installing uv for faster dependency management:${NC}"
+    echo -e "${RED}uv is not installed. Please install it first:${NC}"
     echo -e "${YELLOW}curl -sSf https://astral.sh/uv/install.sh | bash${NC}"
-    USE_UV=false
+    echo -e "${RED}Exiting setup...${NC}"
+    exit 1
 fi
 
 # Create virtual environment
 echo -e "${GREEN}Creating virtual environment...${NC}"
-if [ "$USE_UV" = true ]; then
-    uv venv
-else
-    python -m venv .venv
-fi
+uv venv
 
 # Activate virtual environment
 echo -e "${GREEN}Activating virtual environment...${NC}"
@@ -36,11 +31,7 @@ source .venv/bin/activate
 
 # Install dependencies
 echo -e "${GREEN}Installing dependencies...${NC}"
-if [ "$USE_UV" = true ]; then
-    uv pip install -e ".[dev,examples]"
-else
-    pip install -e ".[dev,examples]"
-fi
+uv pip install -e ".[dev,examples]"
 
 # Create .env file if it doesn't exist
 if [ ! -f .env ]; then

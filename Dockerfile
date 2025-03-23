@@ -1,5 +1,5 @@
-# Use Python 3.8 as the base image
-FROM python:3.8-slim
+# Use Python 3.12 as the base image
+FROM python:3.12-slim
 
 # Set working directory
 WORKDIR /app
@@ -9,21 +9,20 @@ ENV PYTHONDONTWRITEBYTECODE=1 \
     PYTHONUNBUFFERED=1 \
     PYTHONPATH=/app
 
-# Install system dependencies
+# Install system dependencies and uv
 RUN apt-get update \
     && apt-get install -y --no-install-recommends \
         tesseract-ocr \
+        curl \
     && apt-get clean \
-    && rm -rf /var/lib/apt/lists/*
-
-# Copy requirements file
-COPY requirements.txt .
-
-# Install Python dependencies
-RUN pip install --no-cache-dir -r requirements.txt
+    && rm -rf /var/lib/apt/lists/* \
+    && curl -sSf https://astral.sh/uv/install.sh | bash
 
 # Copy project files
 COPY . .
+
+# Install Python dependencies using uv
+RUN uv sync -e .
 
 # Expose port
 EXPOSE 8000

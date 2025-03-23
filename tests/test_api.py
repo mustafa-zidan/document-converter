@@ -1,13 +1,15 @@
 """Integration tests for the API endpoints."""
 import os
 import tempfile
-from pathlib import Path
 
 import pytest
-from fastapi.testclient import TestClient
-from pypdf import PdfWriter
+
+from reportlab.lib.pagesizes import LETTER
+from reportlab.lib.units import inch
+from reportlab.pdfgen.canvas import Canvas
 
 from app.main import app
+from fastapi.testclient import TestClient
 
 
 @pytest.fixture
@@ -23,13 +25,9 @@ def sample_pdf_path():
     with tempfile.NamedTemporaryFile(suffix=".pdf", delete=False) as temp_file:
         pdf_path = temp_file.name
 
-    # Create a simple PDF with text
-    writer = PdfWriter()
-    page = writer.add_blank_page(width=200, height=200)
-    page.insert_text("Hello, this is a test PDF!", x=50, y=100)
-
-    with open(pdf_path, "wb") as output_file:
-        writer.write(output_file)
+    canvas = Canvas(pdf_path, pagesize=LETTER)
+    canvas.drawString(1 * inch, 10 * inch, "Hello, this is a test PDF!")
+    canvas.save()
 
     yield pdf_path
 

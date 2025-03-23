@@ -5,7 +5,9 @@ from pathlib import Path
 from unittest.mock import MagicMock, patch
 
 import pytest
-from pypdf import PdfWriter
+from reportlab.lib.pagesizes import LETTER
+from reportlab.lib.units import inch
+from reportlab.pdfgen.canvas import Canvas
 
 from app.services.pdf_service import PDFConversionError, PDFService
 
@@ -22,14 +24,10 @@ def sample_pdf_path():
     # Create a temporary PDF file
     with tempfile.NamedTemporaryFile(suffix=".pdf", delete=False) as temp_file:
         pdf_path = temp_file.name
-    
-    # Create a simple PDF with text
-    writer = PdfWriter()
-    page = writer.add_blank_page(width=200, height=200)
-    page.insert_text("Hello, this is a test PDF!", x=50, y=100)
-    
-    with open(pdf_path, "wb") as output_file:
-        writer.write(output_file)
+
+    canvas = Canvas(pdf_path, pagesize=LETTER)
+    canvas.drawString(1 * inch, 10 * inch, "Hello, this is a test PDF!")
+    canvas.save()
     
     yield pdf_path
     
@@ -68,13 +66,17 @@ def test_extract_text_from_pdf_error():
 
 
 @patch("app.services.pdf_service.pypdf.PdfReader")
-def test_extract_text_standard_exception(mock_pdf_reader, pdf_service):
+def test_extract_text_standard_exception(mock_pdf_reader, pdf_service, sample_pdf_path):
     """Test exception handling in standard text extraction."""
     # Mock PdfReader to raise an exception
     mock_pdf_reader.side_effect = Exception("Test exception")
-    
-    # Extract text should return empty string on exception
-    text = pdf_service._extract_text_standard(Path("dummy.pdf"))
+
+    with pytest.raises(FileNotFoundError):
+        pdf_service._extract_text_standard(Path("non_existent_file.pdf"))
+
+    # Extract text should raise a PDFConversionError if file does not exist or
+    # empty text if the extraction fails
+    text = pdf_service._extract_text_standard(sample_pdf_path)
     assert text == ""
 
 

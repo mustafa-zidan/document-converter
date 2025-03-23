@@ -6,6 +6,7 @@ A FastAPI service that converts PDF files to text.
 
 - Convert PDF files to text
 - Support for both standard PDFs and scanned PDFs (via OCR)
+- Advanced document understanding with SmolDocling model (v2 API)
 - RESTful API with OpenAPI documentation
 - Proper error handling and validation
 - Configurable via environment variables
@@ -16,6 +17,8 @@ A FastAPI service that converts PDF files to text.
 - Python 3.8+
 - [uv](https://github.com/astral-sh/uv) for dependency management (recommended)
 - [Tesseract OCR](https://github.com/tesseract-ocr/tesseract) (optional, for OCR support)
+- PyTorch and Transformers (for v2 API with SmolDocling model)
+- pdf2image (for v2 API to convert PDFs to images)
 
 ## Installation
 
@@ -55,21 +58,6 @@ cd document-converter
 uv venv
 source .venv/bin/activate  # On Windows: .venv\Scripts\activate
 uv pip install -e .
-```
-
-#### Using pip
-
-```bash
-# Clone the repository
-git clone https://github.com/yourusername/document-converter.git
-cd document-converter
-
-# Create a virtual environment
-python -m venv .venv
-source .venv/bin/activate  # On Windows: .venv\Scripts\activate
-
-# Install dependencies
-pip install -r requirements.txt
 ```
 
 ## Configuration
@@ -197,7 +185,7 @@ Response:
 
 This endpoint provides basic information about the API, including the current version.
 
-#### Convert PDF to Text
+#### Convert PDF to Text (v1 API)
 
 ```
 POST /api/v1/pdf/convert
@@ -216,6 +204,29 @@ Response:
 }
 ```
 
+#### Convert PDF to Text with SmolDocling (v2 API)
+
+```
+POST /api/v1/v2/pdf/convert
+```
+
+This endpoint uses the SmolDocling-256M-preview model from Hugging Face for advanced document understanding. It's particularly effective for complex document layouts and can handle a wide variety of document formats.
+
+Request:
+- `file`: PDF file to convert (multipart/form-data)
+
+Response:
+```json
+{
+  "text": "Extracted text from the PDF using SmolDocling...",
+  "filename": "example.pdf",
+  "page_count": 5,
+  "ocr_used": false
+}
+```
+
+> **Note**: The v2 API requires additional dependencies (PyTorch, Transformers, pdf2image) and may have higher computational requirements due to the machine learning model used.
+
 ### Example Client
 
 An example client script is provided in the `examples` directory to demonstrate how to use the API programmatically:
@@ -231,18 +242,14 @@ An example client script is provided in the `examples` directory to demonstrate 
 ./examples/client_example.py path/to/your/document.pdf --api-url http://api.example.com/api/v1/pdf/convert
 ```
 
-The example client requires the `requests` library, which you can install in several ways:
+The example client requires the `requests` library, which you can install using uv:
 
 ```bash
-# Using pip
-pip install requests
-
-# Using uv
+# Install requests directly
 uv pip install requests
 
 # Or install as an optional dependency group
-uv pip install -e ".[examples]"  # Using uv
-pip install -e ".[examples]"     # Using pip
+uv pip install -e ".[examples]"
 ```
 
 ## Versioning
