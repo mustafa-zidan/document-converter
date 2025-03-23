@@ -4,6 +4,7 @@ from pathlib import Path
 from typing import Optional, Union
 
 import torch
+import platform
 from loguru import logger
 from pdf2image import convert_from_path
 from PIL import Image
@@ -37,7 +38,22 @@ class SmolDoclingService:
             self.model = AutoModelForVision2Seq.from_pretrained(model_name)
 
             # Move model to GPU if available
-            self.device = "cuda" if torch.cuda.is_available() else "cpu"
+            # Check for CUDA (NVIDIA) GPU first
+            if torch.cuda.is_available():
+                self.device = "cuda"
+                logger.info("CUDA GPU detected and will be used for inference")
+            # Check for MPS (Apple Silicon) GPU if CUDA is not available
+            elif platform.system() == "Darwin" and hasattr(torch.backends, "mps") and torch.backends.mps.is_available():
+                self.device = "mps"
+                logger.info("Apple Silicon GPU (MPS) detected and will be used for inference")
+            # Fall back to CPU if no GPU is available
+            else:
+                self.device = "cpu"
+                if platform.system() == "Darwin" and hasattr(torch.backends, "mps"):
+                    logger.warning("Running on Mac but MPS is not available. Using CPU instead.")
+                else:
+                    logger.warning("No GPU detected. Using CPU for inference (this may be slow)")
+
             self.model.to(self.device)
 
             logger.info(
